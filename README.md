@@ -1,2 +1,3 @@
 # cryptopals
-Solutions to cryptopals in js
+
+Solutions to [https://cryptopals.com/](https://cryptopals.com/) challenges in Typescript
