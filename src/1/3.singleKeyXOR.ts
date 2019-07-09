@@ -1,7 +1,7 @@
 export function simpleEvaluator(str: string) {
     let score = 0;
     for (const char of str) {
-        if (!/[a-zA-Z\s']/.test(char)) return 0;
+        if (!/[\w\s'".,?!:;\-()\[\]]/.test(char)) return 0;
         char.toLowerCase() > 'a' && char.toLowerCase() <= 'z' && score++;
     }
     return score / str.length;

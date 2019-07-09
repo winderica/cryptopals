@@ -8,17 +8,18 @@ export function base64Encode(str: string) {
         .join('');
 }
 
-export function base64Decode(str: string) {
-    // TODO: validation
+export function base64DecodeAsCharCode(str: string) {
     const table = Object.fromEntries([...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'].map((i, j) => [i, j]));
-    return new TextDecoder().decode(
-        Uint8Array.from([...str]
-            .map((i) => i === '=' ? '' : table[i].toString(2).padStart(6, '0'))
-            .join('')
-            .match(/.{8}/g)!
-            .map((i) => parseInt(i, 2))
-        )
-    );
+    // TODO: validation
+    return [...str]
+        .map((i) => i === '=' ? '' : table[i].toString(2).padStart(6, '0'))
+        .join('')
+        .match(/.{8}/g)!
+        .map((i) => parseInt(i, 2));
+}
+
+export function base64Decode(str: string) {
+    return new TextDecoder().decode(Uint8Array.from(base64DecodeAsCharCode(str)));
 }
 
 export function hex2base64(str: string) {
