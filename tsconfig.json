@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": ".",
+    "module": "commonjs",
+    "outDir": "build",
+    "target": "esnext",
+    "sourceMap": true,
+    "allowJs": true,
+    "moduleResolution": "node",
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    "paths": {
+      "set1/*": ["src/1/*"],
+      "set2/*": ["src/2/*"],
+      "set3/*": ["src/3/*"],
+      "set4/*": ["src/4/*"],
+      "set5/*": ["src/5/*"],
+      "set6/*": ["src/6/*"],
+      "set7/*": ["src/7/*"],
+      "set8/*": ["src/8/*"]
+    },
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "suppressImplicitAnyIndexErrors": true,
+    "noUnusedLocals": true,
+    "experimentalDecorators": true
+  },
+  "exclude": [
+    "node_modules",
+    "build"
+  ]
+}
