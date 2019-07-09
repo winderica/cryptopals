@@ -7,5 +7,5 @@ describe('Set 1 Challenge 2', () => {
         const answer = '746865206b696420646f6e277420706c6179';
         expect(fixedXOR(str1, str2)).toBe(answer);
         done();
-    })
+    });
 });

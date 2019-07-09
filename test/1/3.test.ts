@@ -6,5 +6,5 @@ describe('Set 1 Challenge 3', () => {
         const { plaintext, key } = decrypt(cipher);
         console.log(`plaintext: ${plaintext}\nkey: ${String.fromCharCode(key)}`);
         done();
-    })
+    });
 });

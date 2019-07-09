@@ -6,5 +6,5 @@ describe('Set 1 Challenge 1', () => {
         const answer = 'SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t';
         expect(hex2base64(str)).toBe(answer);
         done();
-    })
+    });
 });
