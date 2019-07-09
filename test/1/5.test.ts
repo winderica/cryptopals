@@ -1,4 +1,4 @@
-import { multiKeyXOR } from 'set1/5.mutilKeyXOR';
+import { multiKeyXOR } from 'set1/5.mutliKeyXOR';
 
 describe('Set 1 Challenge 5', () => {
     it('should produce right answer', (done) => {
