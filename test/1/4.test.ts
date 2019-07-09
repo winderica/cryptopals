@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { decrypt } from 'set1/4.xorCipher';
+import { decrypt } from 'set1/4.singleKeyXOR';
 
 describe('Set 1 Challenge 4', () => {
     it('should produce right answer', (done) => {

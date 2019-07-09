@@ -1,4 +1,4 @@
-import { decrypt } from 'set1/3.xorCipher';
+import { decrypt } from 'set1/3.singleKeyXOR';
 
 describe('Set 1 Challenge 3', () => {
     it('should produce right answer', (done) => {

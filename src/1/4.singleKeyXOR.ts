@@ -1,4 +1,4 @@
-import { decrypt as decryptBase, simpleEvaluator } from './3.xorCipher';
+import { decrypt as decryptBase, simpleEvaluator } from './3.singleKeyXOR';
 
 export function decrypt(buffer: Buffer) {
     const ciphers = buffer.toString().split('\n');
