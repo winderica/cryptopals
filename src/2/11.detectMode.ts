@@ -3,7 +3,7 @@ import { SimpleAES } from '../utils/simpleAES';
 
 function encrypt(plaintext: string) {
     const mode = Math.random() > 0.5 ? 'aes-128-ecb' : 'aes-128-cbc';
-    const randomString = (length = 16) => randomBytes(100).toString('ascii').slice(0, 16);
+    const randomString = (length = 16) => randomBytes(100).toString('ascii').slice(0, length);
     const cipher = new SimpleAES(mode, randomString(), randomString())
         .encrypt(randomString(10) + plaintext + randomString(10), 'ascii', 'hex');
     return { cipher, mode };
