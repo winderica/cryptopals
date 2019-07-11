@@ -82,7 +82,7 @@ export class SimpleAES {
         } else {
             plaintext = cipherBlocks.map((cipherBlock) => [...this.decryptCore(keyStates, cipherBlock)]).flat();
         }
-        return unpadPKCS7(this.textConverter(Uint8Array.from(plaintext), messageEncoding));
+        return this.textConverter(unpadPKCS7(Uint8Array.from(plaintext)), messageEncoding);
     }
 
     private encryptCore(keyStates: Uint8Array[], textBlock: Uint8Array) {
