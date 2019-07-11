@@ -1,3 +1,3 @@
-import { detect } from './2/11.detectMode';
+import { byteAtATime } from './2/12.ECBByteAtATime';
 
-console.log(detect());
+console.log(byteAtATime());
