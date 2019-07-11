@@ -1,3 +1,7 @@
 import { SimpleAES } from './utils/simpleAES';
 
-console.log(new SimpleAES('', 'Thats my Kung Fu', '').encrypt('Two One Nine Two'));
+const aes = new SimpleAES('', 'YELLOW SUBMARINE', '');
+const encrypted = aes.encrypt('YELLOW SUBMARINE', 'ascii', 'base64');
+console.log(encrypted);
+const decrypted = aes.decrypt(encrypted, 'base64', 'ascii');
+console.log(decrypted);

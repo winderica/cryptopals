@@ -1,4 +1,4 @@
-import { base64Encode } from '../1/1.hex2base64';
+import { base64DecodeAsCharCode, base64EncodeFromCharCode } from '../1/1.hex2base64';
 import { GF256 } from './gf256';
 
 export class SimpleAES {
@@ -16,33 +16,91 @@ export class SimpleAES {
             ^ this.rotateLeft(i, 4)
             ^ 0x63
         );
+    private sBoxInv = new Uint8Array(256)
+        .map((i, j) => this.rotateLeft(j)
+            ^ this.rotateLeft(j, 3)
+            ^ this.rotateLeft(j, 6)
+            ^ 0x05
+        )
+        .map((i) => GF256.inverse(i));
 
     constructor(algorithm: string, key: string, iv = '') {
-        this.algorithm = algorithm;
+        this.algorithm = algorithm; // TODO
         this.key = key;
-        this.iv = iv;
+        this.iv = iv; // TODO
     }
 
-    encrypt(plaintext: string) {
-        let textBlock = Uint8Array.from([...plaintext].map((i) => i.charCodeAt(0)));
-        const keyBlock = this.keyExpansion([...this.key].map((i) => i.charCodeAt(0)));
-        textBlock = this.addRoundKey(textBlock, keyBlock.slice(0, 16));
-        [...new Array(this.key.length / 4 + 6)].map((i, j, array) => {
-            textBlock = this.subBytes(textBlock);
-            textBlock = this.shiftRows(textBlock);
-            j + 1 !== array.length && (textBlock = this.mixColumns(textBlock));
-            textBlock = this.addRoundKey(textBlock, keyBlock.slice(16 * (j + 1), 16 * (j + 2)));
-        });
-        return base64Encode([...textBlock].map((i) => String.fromCharCode(i)).join(''));
+    encrypt(plaintext: string, messageEncoding: 'utf8' | 'ascii', cipherEncoding: 'base64' | 'hex') {
+        const plainBytes = this.padPKCS5(this.textConverter(plaintext, messageEncoding));
+        const textBlocks = this.chunkIntoBlocks(plainBytes, 16);
+        const keyBlocks = this.keyExpansion(this.textConverter(this.key, messageEncoding));
+        const keyStates = keyBlocks.map((i) => this.transpose(i));
+        const cipher = Uint8Array.from(textBlocks.map((textBlock) => {
+            let textState = this.transpose(textBlock);
+            textState = this.addRoundKey(textState, keyStates[0]);
+            [...new Array(this.key.length / 4 + 6)].forEach((i, j, array) => {
+                textState = this.subBytes(textState);
+                textState = this.shiftRows(textState);
+                j + 1 !== array.length && (textState = this.mixColumns(textState));
+                textState = this.addRoundKey(textState, keyStates[j + 1]);
+            });
+            return [...this.transpose(textState)];
+        }).flat());
+        return this.cipherConverter(cipher, cipherEncoding);
     }
 
-    private keyExpansion(keyBlock: number[]) {
-        const key = [...new Uint32Array(keyBlock.length / 4)].map((i, j) =>
-            this.uint8ToUint32(keyBlock.slice(j * 4, j * 4 + 4))
-        );
+    decrypt(cipher: string, cipherEncoding: 'base64' | 'hex', messageEncoding: 'utf8' | 'ascii') {
+        const cipherBytes = this.cipherConverter(cipher, cipherEncoding);
+        const cipherBlocks = this.chunkIntoBlocks(cipherBytes, 16);
+        const keyBlocks = this.keyExpansion(this.textConverter(this.key, messageEncoding));
+        const keyStates = keyBlocks.map((i) => this.transpose(i)).reverse();
+        const plaintext = Uint8Array.from(cipherBlocks.map((cipherBlock) => {
+            let cipherState = this.transpose(cipherBlock);
+            cipherState = this.addRoundKey(cipherState, keyStates[0]);
+            [...new Array(this.key.length / 4 + 6)].forEach((i, j, array) => {
+                cipherState = this.shiftRows(cipherState, true);
+                cipherState = this.subBytes(cipherState, true);
+                cipherState = this.addRoundKey(cipherState, keyStates[j + 1]);
+                j + 1 !== array.length && (cipherState = this.mixColumns(cipherState, true));
+            });
+            return [...this.transpose(cipherState)];
+        }).flat());
+        return this.unpadPKCS5(this.textConverter(plaintext, messageEncoding));
+    }
+
+    private textConverter(text: string, messageEncoding: 'utf8' | 'ascii'): Uint8Array;
+    private textConverter(text: Uint8Array, messageEncoding: 'utf8' | 'ascii'): string;
+    private textConverter(text: string | Uint8Array, messageEncoding: 'utf8' | 'ascii') {
+        if (typeof text === 'string') {
+            return messageEncoding === 'utf8'
+                ? new TextEncoder().encode(text)
+                : Uint8Array.from([...text].map((i) => i.charCodeAt(0)));
+        } else {
+            return messageEncoding === 'utf8'
+                ? new TextDecoder().decode(text)
+                : [...text].map((i) => String.fromCharCode(i)).join('');
+        }
+    }
+
+    private cipherConverter(cipher: string, cipherEncoding: 'base64' | 'hex'): Uint8Array;
+    private cipherConverter(cipher: Uint8Array, cipherEncoding: 'base64' | 'hex'): string;
+    private cipherConverter(cipher: string | Uint8Array, cipherEncoding: 'base64' | 'hex') {
+        if (typeof cipher === 'string') {
+            return cipherEncoding === 'base64'
+                ? base64DecodeAsCharCode(cipher)
+                : Uint8Array.from(cipher.match(/.{2}/g)!.map((i) => parseInt(i, 16)));
+        } else {
+            return cipherEncoding === 'base64'
+                ? base64EncodeFromCharCode(cipher)
+                : [...cipher].map((i) => i.toString(16).padStart(2, '0')).join('');
+        }
+    }
+
+    private keyExpansion(keyBlock: Uint8Array) {
+        const key = this.chunkIntoBlocks(keyBlock, 4).map((i) => this.uint8ToUint32(i));
         const n = key.length; // 4 | 6 | 8
         const round = n + 7; // 11 | 13 | 15
-        const expanded = new Uint32Array(4 * round);
+        const expanded = new Array(4 * round);
         for (let i = 0; i < expanded.length; i++) {
             if (i < n) {
                 expanded[i] = key[i];
@@ -56,7 +114,40 @@ export class SimpleAES {
                 expanded[i] = expanded[i - n] ^ expanded[i - 1];
             }
         }
-        return Uint8Array.from([...expanded].flatMap((i) => this.uint32ToUint8(i)));
+        return this.chunkIntoBlocks(expanded.flatMap((i) => this.uint32ToUint8(i)), 16);
+    }
+
+    private subBytes(state: Uint8Array, inverse = false) {
+        return state.map((i) => (inverse ? this.sBoxInv : this.sBox)[i]);
+    }
+
+    private shiftRows(state: Uint8Array, inverse = false) {
+        return Uint8Array.from([...new Array(4)].flatMap((i, j) =>
+            inverse
+                ? [...state.slice(j * 3 + 4, j * 4 + 4), ...state.slice(j * 4, j * 3 + 4)]
+                : [...state.slice(j * 5, j * 4 + 4), ...state.slice(j * 4, j * 5)]
+        ));
+    }
+
+    private mixColumns(state: Uint8Array, inverse = false) {
+        const matrix = inverse ? [
+            [14, 11, 13, 9],
+            [9, 14, 11, 13],
+            [13, 9, 14, 11],
+            [11, 13, 9, 14]
+        ] : [
+            [2, 3, 1, 1],
+            [1, 2, 3, 1],
+            [1, 1, 2, 3],
+            [3, 1, 1, 2]
+        ];
+        return Uint8Array.from([...new Array(16)].map((_, i) =>
+            matrix[~~(i / 4)].reduce((prev, curr, j) => prev ^ GF256.multiply(state[j * 4 + i % 4], curr), 0)
+        ));
+    }
+
+    private addRoundKey(state: Uint8Array, keyState: Uint8Array) {
+        return state.map((i, j) => i ^ keyState[j]);
     }
 
     private uint8ToUint32([a0, a1, a2, a3]: number[] | Uint8Array) {
@@ -67,41 +158,8 @@ export class SimpleAES {
         return [x >>> 24 & 0xff, x >>> 16 & 0xff, x >>> 8 & 0xff, x & 0xff];
     }
 
-    private subBytes(textBlock: Uint8Array) {
-        const textState = this.transpose(textBlock);
-        return this.transpose(textState.map((i) => this.sBox[i]));
-    }
-
-    private shiftRows(textBlock: Uint8Array) {
-        const textState = this.transpose(textBlock);
-        return this.transpose(Uint8Array.from([...new Array(4)].flatMap((i, j) =>
-            [...textState.slice(j * 5, j * 4 + 4), ...textState.slice(j * 4, j * 5)]
-        )));
-    }
-
-    private mixColumns(textBlock: Uint8Array) {
-        const matrix = [
-            [2, 3, 1, 1],
-            [1, 2, 3, 1],
-            [1, 1, 2, 3],
-            [3, 1, 1, 2]
-        ];
-        const textState = this.transpose(textBlock);
-        return this.transpose(Uint8Array.from([...new Array(16)].map((_, i) =>
-            matrix[~~(i / 4)].reduce((prev, curr, j) => prev ^ GF256.multiply(textState[j * 4 + i % 4], curr), 0)
-        )));
-    }
-
-    private addRoundKey(textBlock: Uint8Array, keyBlock: Uint8Array) {
-        const textState = this.transpose(textBlock);
-        const keyState = this.transpose(keyBlock);
-        return this.transpose(textState.map((i, j) => i ^ keyState[j]));
-    }
-
     private transpose(arr: Uint8Array) {
-        return Uint8Array.from([...new Array(16)]
-            .map((_, i) => arr[~~(i / 4) + 4 * (i % 4)])
-        );
+        return Uint8Array.from([...new Array(16)].map((_, i) => arr[~~(i / 4) + 4 * (i % 4)]));
     }
 
     private rotateLeft(x: number, shift = 1, bits = 8) {
@@ -114,5 +172,22 @@ export class SimpleAES {
 
     private subWord(word: number) {
         return this.uint8ToUint32(this.uint32ToUint8(word).map((i) => this.sBox[i]));
+    }
+
+    private chunkIntoBlocks(arr: number[] | Uint8Array, chunkSize: number) {
+        return [...new Array(Math.ceil(arr.length / chunkSize))].map((i, j) =>
+            Uint8Array.from(arr.slice(j * chunkSize, (j + 1) * chunkSize))
+        );
+    }
+
+    private padPKCS5(arr: Uint8Array) {
+        const maxLength = ~~(arr.length / 16) * 16 + 16;
+        const fillByte = maxLength - arr.length;
+        return Uint8Array.from([...arr, ...new Uint8Array(fillByte).map(() => fillByte)]);
+    }
+
+    private unpadPKCS5(str: string) {
+        const fillByte = str.charCodeAt(str.length - 1);
+        return str.slice(0, str.length - fillByte);
     }
 }
