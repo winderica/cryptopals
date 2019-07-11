@@ -1,3 +1,3 @@
-import { byteAtATime } from './2/12.ECBByteAtATime';
+import { hack } from './2/13.ECBCutAndPaste';
 
-console.log(byteAtATime());
+console.log(hack());
