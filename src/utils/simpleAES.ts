@@ -1,4 +1,5 @@
 import { base64DecodeAsCharCode, base64EncodeFromCharCode } from '../1/1.hex2base64';
+import { padPKCS7, unpadPKCS7 } from '../2/9.pkcs7';
 import { GF256 } from './gf256';
 
 export class SimpleAES {
@@ -31,7 +32,7 @@ export class SimpleAES {
     }
 
     encrypt(plaintext: string, messageEncoding: 'utf8' | 'ascii', cipherEncoding: 'base64' | 'hex') {
-        const plainBytes = this.padPKCS7(this.textConverter(plaintext, messageEncoding));
+        const plainBytes = padPKCS7(this.textConverter(plaintext, messageEncoding));
         const textBlocks = this.chunkIntoBlocks(plainBytes, 16);
         const keyBlocks = this.keyExpansion(this.textConverter(this.key, messageEncoding));
         const keyStates = keyBlocks.map((i) => this.transpose(i));
@@ -65,7 +66,7 @@ export class SimpleAES {
             });
             return [...this.transpose(cipherState)];
         }).flat());
-        return this.unpadPKCS7(this.textConverter(plaintext, messageEncoding));
+        return unpadPKCS7(this.textConverter(plaintext, messageEncoding));
     }
 
     private textConverter(text: string, messageEncoding: 'utf8' | 'ascii'): Uint8Array;
@@ -178,16 +179,5 @@ export class SimpleAES {
         return [...new Array(Math.ceil(arr.length / chunkSize))].map((i, j) =>
             Uint8Array.from(arr.slice(j * chunkSize, (j + 1) * chunkSize))
         );
-    }
-
-    private padPKCS7(arr: Uint8Array) {
-        const maxLength = ~~(arr.length / 16) * 16 + 16;
-        const fillByte = maxLength - arr.length;
-        return Uint8Array.from([...arr, ...new Uint8Array(fillByte).map(() => fillByte)]);
-    }
-
-    private unpadPKCS7(str: string) {
-        const fillByte = str.charCodeAt(str.length - 1);
-        return str.slice(0, str.length - fillByte);
     }
 }
