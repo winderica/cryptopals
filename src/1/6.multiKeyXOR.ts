@@ -38,7 +38,7 @@ function transpose(block: string[]) {
 }
 
 export function decrypt(buffer: Buffer) {
-    const decoded = base64DecodeAsCharCode(buffer.toString().split('\n').join('')).map((i) => String.fromCharCode(i)).join('');
+    const decoded = [...base64DecodeAsCharCode(buffer.toString().split('\n').join(''))].map((i) => String.fromCharCode(i)).join('');
     const keySize = determineKeySize(decoded);
     const block = chunk(decoded, keySize);
     const transposed = transpose(block);

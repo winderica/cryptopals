@@ -1,5 +1,5 @@
-import { AES } from '../utils/aes';
+import { SimpleAES } from '../utils/simpleAES';
 
 export function decrypt(cipher: string, key: string) {
-    return new AES('aes-128-ecb', key).decrypt(cipher);
+    return new SimpleAES('aes-128-ecb', key).decrypt(cipher, 'base64', 'ascii');
 }
