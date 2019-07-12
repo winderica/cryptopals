@@ -1,5 +1,6 @@
 import { base64DecodeAsCharCode, base64EncodeFromCharCode } from '../1/1.hex2base64';
 import { padPKCS7, unpadPKCS7 } from '../2/9.pkcs7';
+import { bytes2hex, bytes2str, hex2bytes, str2bytes } from './converter';
 import { GF256 } from './gf256';
 
 type Algorithm =
@@ -115,11 +116,11 @@ export class SimpleAES {
         if (typeof text === 'string') {
             return messageEncoding === 'utf8'
                 ? new TextEncoder().encode(text)
-                : Uint8Array.from([...text].map((i) => i.charCodeAt(0)));
+                : Uint8Array.from(str2bytes(text));
         } else {
             return messageEncoding === 'utf8'
                 ? new TextDecoder().decode(text)
-                : String.fromCharCode(...text);
+                : bytes2str(text);
         }
     }
 
@@ -129,11 +130,11 @@ export class SimpleAES {
         if (typeof cipher === 'string') {
             return cipherEncoding === 'base64'
                 ? base64DecodeAsCharCode(cipher)
-                : Uint8Array.from(cipher.match(/.{2}/g)!.map((i) => parseInt(i, 16)));
+                : Uint8Array.from(hex2bytes(cipher));
         } else {
             return cipherEncoding === 'base64'
                 ? base64EncodeFromCharCode(cipher)
-                : [...cipher].map((i) => i.toString(16).padStart(2, '0')).join('');
+                : bytes2hex(cipher);
         }
     }
 

@@ -1,3 +1,5 @@
+import { hex2bytes } from '../utils/converter';
+
 export function simpleEvaluator(str: string) {
     let score = 0;
     for (const char of str) {
@@ -14,9 +16,7 @@ function xor(charCodeArray: number[], key: number) {
 }
 
 export function decrypt(cipher: string) {
-    const charCodeArray = cipher
-        .match(/.{2}/g)!
-        .map((i) => parseInt(i, 16));
+    const charCodeArray = hex2bytes(cipher);
     const scoreArray = [...new Array(256)].map((i, j) => simpleEvaluator(xor(charCodeArray, j)));
     const key = scoreArray.indexOf(Math.max(...scoreArray));
     const plaintext = xor(charCodeArray, key);

@@ -1,3 +1,4 @@
+import { bytes2hex, hex2bytes } from '../utils/converter';
 import { randomString } from '../utils/random';
 import { SimpleAES } from '../utils/simpleAES';
 
@@ -19,11 +20,9 @@ export function hack() {
     const str = ';admin=true';
     const char = '\x01';
     const data = char.repeat(16 + str.length);
-    const crafted = encrypt(data)
-        .match(/.{2}/g)!
-        .map((i) => parseInt(i, 16))
-        .map((i, j) => j >= 32 && j < 32 + str.length ? i ^ str.charCodeAt(j - 32) ^ char.charCodeAt(0) : i)
-        .map((i) => i.toString(16).padStart(2, '0'))
-        .join('');
+    const crafted = bytes2hex(
+        hex2bytes(encrypt(data))
+            .map((i, j) => j >= 32 && j < 32 + str.length ? i ^ str.charCodeAt(j - 32) ^ char.charCodeAt(0) : i)
+    );
     return decrypt(crafted).includes(';admin=true;');
 }
