@@ -1,4 +1,3 @@
-import { base64DecodeAsCharCode } from './1.hex2base64';
 import { decrypt as decryptSingleKey } from './3.singleKeyXOR';
 import { multiKeyXOR } from './5.mutliKeyXOR';
 
@@ -37,8 +36,8 @@ function transpose(block: string[]) {
         );
 }
 
-export function decrypt(str: string, keySize?: number) {
-    const decoded = [...base64DecodeAsCharCode(str)].map((i) => String.fromCharCode(i)).join('');
+export function decrypt(bytes: number[], keySize?: number) {
+    const decoded = bytes.map((i) => String.fromCharCode(i)).join('');
     keySize = keySize || determineKeySize(decoded);
     const block = chunk(decoded, keySize);
     const transposed = transpose(block);
