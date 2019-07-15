@@ -4,14 +4,21 @@ import { bytes2hex, bytes2str, hex2bytes, str2bytes } from './converter';
 import { GF256 } from './gf256';
 
 type Algorithm =
-    'aes-128-ecb'
+    | 'aes-128-ecb'
     | 'aes-192-ecb'
     | 'aes-256-ecb'
     | 'aes-128-cbc'
     | 'aes-192-cbc'
-    | 'aes-256-cbc';
+    | 'aes-256-cbc'
+    | 'aes-128-ctr'
+    | 'aes-192-ctr'
+    | 'aes-256-ctr';
 
-type MessageEncoding = 'utf8' | 'ascii';
+const CTR = 'CTR';
+const CBC = 'CBC';
+const ECB = 'ECB';
+
+type MessageEncoding = 'utf-8' | 'ascii';
 
 type CipherEncoding = 'base64' | 'hex';
 
@@ -39,51 +46,103 @@ export class SimpleAES {
         .map((i) => GF256.inverse(i));
 
     constructor(algorithm: Algorithm, key: string, iv = '') {
+        if (algorithm.includes('cbc')) {
+            this.algorithm = CBC;
+        } else if (algorithm.includes('ctr')) {
+            this.algorithm = CTR;
+        } else if (algorithm.includes('ecb')) {
+            this.algorithm = ECB;
+        } else {
+            throw new Error('Invalid algorithm!');
+        }
         if (key.length !== +algorithm.split('-')[1] / 8) {
             throw new Error('Invalid key!');
         }
-        if (iv.length !== 16 && algorithm.includes('cbc')) {
+        if (iv.length !== 16 && this.algorithm === CBC) {
             throw new Error('Invalid iv!');
         }
-        this.algorithm = algorithm;
+        if (iv.length !== 16 && this.algorithm === CTR) {
+            throw new Error('Invalid nonce!');
+        }
         this.key = key;
         this.iv = iv;
     }
 
-    encrypt(plaintext: string, messageEncoding: MessageEncoding, cipherEncoding: CipherEncoding) {
-        const plainBytes = padPKCS7(this.textConverter(plaintext, messageEncoding));
-        const textBlocks = this.chunkIntoBlocks(plainBytes, 16);
+    encrypt(plaintext: string, messageEncoding: MessageEncoding = 'ascii', cipherEncoding: CipherEncoding = 'base64', counter = this.counter) {
+        const plainBytes = this.textConverter(plaintext, messageEncoding);
+        const textBlocks = this.chunkIntoBlocks(this.algorithm === CTR ? plainBytes : padPKCS7(plainBytes), 16);
         const keyBlocks = this.keyExpansion(this.textConverter(this.key, messageEncoding));
         const keyStates = keyBlocks.map(this.transpose);
-        let cipher;
-        if (this.algorithm.includes('cbc')) {
-            const ivs = [this.textConverter(this.iv, messageEncoding)];
-            cipher = textBlocks.map((textBlock, index) => {
-                ivs[index + 1] = this.encryptCore(keyStates, this.addRoundKey(textBlock, ivs[index]));
-                return [...ivs[index + 1]];
-            }).flat();
-        } else {
-            cipher = textBlocks.map((textBlock) => [...this.encryptCore(keyStates, textBlock)]).flat();
+        switch (this.algorithm) {
+            case CBC: {
+                const ivs = [this.textConverter(this.iv, messageEncoding)];
+                const cipher = textBlocks.map((textBlock, index) => {
+                    ivs[index + 1] = this.encryptCore(keyStates, this.addRoundKey(textBlock, ivs[index]));
+                    return [...ivs[index + 1]];
+                }).flat();
+                return this.cipherConverter(Uint8Array.from(cipher), cipherEncoding);
+            }
+            case ECB: {
+                const cipher = textBlocks.map((textBlock) => [...this.encryptCore(keyStates, textBlock)]).flat();
+                return this.cipherConverter(Uint8Array.from(cipher), cipherEncoding);
+            }
+            case CTR: {
+                const nonce = this.textConverter(this.iv, messageEncoding);
+                const cipher = textBlocks.map((textBlock, index) => {
+                    const encrypted = this.encryptCore(keyStates, counter(index, nonce));
+                    return [...textBlock].map((i, j) => i ^ encrypted[j]);
+                }).flat();
+                return this.cipherConverter(Uint8Array.from(cipher), cipherEncoding);
+            }
+            default:
+                throw new Error('Algorithm not supported yet.');
         }
-        return this.cipherConverter(Uint8Array.from(cipher), cipherEncoding);
     }
 
-    decrypt(cipher: string, cipherEncoding: CipherEncoding, messageEncoding: MessageEncoding) {
+    decrypt(cipher: string, cipherEncoding: CipherEncoding = 'base64', messageEncoding: MessageEncoding = 'ascii', counter = this.counter) {
         const cipherBytes = this.cipherConverter(cipher, cipherEncoding);
         const cipherBlocks = this.chunkIntoBlocks(cipherBytes, 16);
         const keyBlocks = this.keyExpansion(this.textConverter(this.key, messageEncoding));
-        const keyStates = keyBlocks.map(this.transpose).reverse();
-        let plaintext;
-        if (this.algorithm.includes('cbc')) {
-            const ivs = [this.textConverter(this.iv, messageEncoding)];
-            plaintext = cipherBlocks.map((cipherBlock, index) => {
-                ivs[index + 1] = cipherBlock;
-                return [...this.addRoundKey(this.decryptCore(keyStates, cipherBlock), ivs[index])];
-            }).flat();
-        } else {
-            plaintext = cipherBlocks.map((cipherBlock) => [...this.decryptCore(keyStates, cipherBlock)]).flat();
+        const keyStates = this.algorithm === CTR ? keyBlocks.map(this.transpose) : keyBlocks.map(this.transpose).reverse();
+        switch (this.algorithm) {
+            case CBC: {
+                const ivs = [this.textConverter(this.iv, messageEncoding)];
+                const plaintext = cipherBlocks.map((cipherBlock, index) => {
+                    ivs[index + 1] = cipherBlock;
+                    return [...this.addRoundKey(this.decryptCore(keyStates, cipherBlock), ivs[index])];
+                }).flat();
+                return this.textConverter(unpadPKCS7(Uint8Array.from(plaintext)), messageEncoding);
+            }
+            case ECB: {
+                const plaintext = cipherBlocks.map((cipherBlock) => [...this.decryptCore(keyStates.reverse(), cipherBlock)]).flat();
+                return this.textConverter(unpadPKCS7(Uint8Array.from(plaintext)), messageEncoding);
+            }
+            case CTR: {
+                const nonce = this.textConverter(this.iv, messageEncoding);
+                const plaintext = cipherBlocks.map((cipherBlock, index) => {
+                    const decrypted = this.encryptCore(keyStates, counter(index, nonce));
+                    return [...cipherBlock].map((i, j) => i ^ decrypted[j]);
+                }).flat();
+                return this.textConverter(Uint8Array.from(plaintext), messageEncoding);
+            }
+            default:
+                throw new Error('Algorithm not supported yet.');
         }
-        return this.textConverter(unpadPKCS7(Uint8Array.from(plaintext)), messageEncoding);
+    }
+
+    private counter(index: number, nonce: Uint8Array) {
+        const indexArray = index.toString(16).padStart(32, '0').match(/.{2}/g)!.map((i) => parseInt(i, 16));
+        const resultArray = new Uint8Array(16);
+        indexArray.reverse().forEach((i, j) => {
+            const result = i + nonce[15 - j];
+            if (result >= 256) {
+                resultArray[15 - j] += result - 256;
+                resultArray[14 - j] = 1;
+            } else {
+                resultArray[15 - j] += result;
+            }
+        });
+        return resultArray;
     }
 
     private encryptCore(keyStates: Uint8Array[], textBlock: Uint8Array) {
@@ -114,11 +173,11 @@ export class SimpleAES {
     private textConverter(text: Uint8Array, messageEncoding: MessageEncoding): string;
     private textConverter(text: string | Uint8Array, messageEncoding: MessageEncoding) {
         if (typeof text === 'string') {
-            return messageEncoding === 'utf8'
+            return messageEncoding === 'utf-8'
                 ? new TextEncoder().encode(text)
                 : Uint8Array.from(str2bytes(text));
         } else {
-            return messageEncoding === 'utf8'
+            return messageEncoding === 'utf-8'
                 ? new TextDecoder().decode(text)
                 : bytes2str(text);
         }
