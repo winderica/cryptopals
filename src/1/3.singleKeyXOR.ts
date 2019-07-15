@@ -1,4 +1,4 @@
-import { hex2bytes } from '../utils/converter';
+import { hex2bytes } from 'utils/converter';
 
 export function simpleEvaluator(str: string) {
     let score = 0;

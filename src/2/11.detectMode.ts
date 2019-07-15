@@ -1,5 +1,5 @@
-import { randomString } from '../utils/random';
-import { SimpleAES } from '../utils/simpleAES';
+import { randomString } from 'utils/random';
+import { SimpleAES } from 'utils/simpleAES';
 
 function encrypt(plaintext: string) {
     const mode = Math.random() > 0.5 ? 'aes-128-ecb' : 'aes-128-cbc';

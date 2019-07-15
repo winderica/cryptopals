@@ -1,6 +1,6 @@
+import { randomString } from 'utils/random';
+import { SimpleAES } from 'utils/simpleAES';
 import { base64Decode } from '../1/1.hex2base64';
-import { randomString } from '../utils/random';
-import { SimpleAES } from '../utils/simpleAES';
 
 const key = randomString();
 export const unknownString = base64Decode('Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpU' +

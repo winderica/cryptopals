@@ -1,6 +1,6 @@
-import { bytes2hex, hex2bytes } from '../utils/converter';
-import { randomString } from '../utils/random';
-import { SimpleAES } from '../utils/simpleAES';
+import { bytes2hex, hex2bytes } from 'utils/converter';
+import { randomString } from 'utils/random';
+import { SimpleAES } from 'utils/simpleAES';
 
 const prefix = 'comment1=cooking%20MCs;userdata=';
 const key = randomString();

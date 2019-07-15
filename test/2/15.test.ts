@@ -1,5 +1,5 @@
 import { validatePKCS7 } from 'set2/15.validatePKCS7';
-import { str2bytes } from '../../src/utils/converter';
+import { str2bytes } from 'utils/converter';
 
 describe('Set 2 Challenge 15', () => {
     it('should produce right answer', (done) => {

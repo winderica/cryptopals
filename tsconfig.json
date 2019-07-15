@@ -19,7 +19,8 @@
       "set5/*": ["src/5/*"],
       "set6/*": ["src/6/*"],
       "set7/*": ["src/7/*"],
-      "set8/*": ["src/8/*"]
+      "set8/*": ["src/8/*"],
+      "utils/*": ["src/utils/*"]
     },
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,

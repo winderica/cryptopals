@@ -1,5 +1,5 @@
-import { randomString } from '../utils/random';
-import { SimpleAES } from '../utils/simpleAES';
+import { randomString } from 'utils/random';
+import { SimpleAES } from 'utils/simpleAES';
 
 const key = randomString();
 
