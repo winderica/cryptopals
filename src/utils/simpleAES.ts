@@ -3,7 +3,7 @@ import { padPKCS7, unpadPKCS7 } from '../2/9.pkcs7';
 import { bytes2hex, bytes2str, hex2bytes, str2bytes } from './converter';
 import { GF256 } from './gf256';
 
-type Algorithm =
+export type Algorithm =
     | 'aes-128-ecb'
     | 'aes-192-ecb'
     | 'aes-256-ecb'
@@ -58,10 +58,10 @@ export class SimpleAES {
         if (key.length !== +algorithm.split('-')[1] / 8) {
             throw new Error('Invalid key!');
         }
-        if (iv.length !== 16 && this.algorithm === CBC) {
+        if (this.algorithm === CBC && iv.length !== 16) {
             throw new Error('Invalid iv!');
         }
-        if (iv.length !== 16 && this.algorithm === CTR) {
+        if (this.algorithm === CTR && iv.length !== 16) {
             throw new Error('Invalid nonce!');
         }
         this.key = key;
@@ -114,7 +114,7 @@ export class SimpleAES {
                 return this.textConverter(unpadPKCS7(Uint8Array.from(plaintext)), messageEncoding);
             }
             case ECB: {
-                const plaintext = cipherBlocks.map((cipherBlock) => [...this.decryptCore(keyStates.reverse(), cipherBlock)]).flat();
+                const plaintext = cipherBlocks.map((cipherBlock) => [...this.decryptCore(keyStates, cipherBlock)]).flat();
                 return this.textConverter(unpadPKCS7(Uint8Array.from(plaintext)), messageEncoding);
             }
             case CTR: {
