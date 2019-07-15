@@ -33,7 +33,7 @@ function decrypt(cipher: string) {
     }
 }
 
-export function hack() {
+export function paddingOracle() {
     const cipher = encrypt();
     const bytes = str2bytes(iv).concat(hex2bytes(cipher));
     const t = new Uint8Array(bytes.length - 16);

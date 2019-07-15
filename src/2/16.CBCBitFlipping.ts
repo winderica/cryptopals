@@ -16,7 +16,7 @@ function decrypt(cipher: string) {
     return new SimpleAES('aes-128-cbc', key, iv).decrypt(cipher, 'hex', 'ascii');
 }
 
-export function hack() {
+export function bitFlipping() {
     const str = ';admin=true';
     const char = '\x01';
     const data = char.repeat(16 + str.length);
