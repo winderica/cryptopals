@@ -29,19 +29,25 @@ function determineKeySize(cipher: string) {
 }
 
 function transpose(block: string[]) {
-    return [...block[0]]
+    const longest = block.reduce((i, j) => i.length > j.length ? i : j, '');
+    return [...longest]
         .map((col, i) => block
             .map((row) => row[i] && row[i].charCodeAt(0).toString(16).padStart(2, '0'))
             .join('')
         );
 }
 
-export function decrypt(bytes: number[], keySize?: number) {
-    const decoded = bytes.map((i) => String.fromCharCode(i)).join('');
-    keySize = keySize || determineKeySize(decoded);
-    const block = chunk(decoded, keySize);
+export function decrypt(str: string) {
+    const block = chunk(str, determineKeySize(str));
     const transposed = transpose(block);
     const key = transposed.map((i) => String.fromCharCode(decryptSingleKey(i).key)).join('');
-    const plaintext = chunk(multiKeyXOR(decoded, key), 2).map((i) => String.fromCharCode(parseInt(i, 16))).join('');
+    const plaintext = chunk(multiKeyXOR(str, key), 2).map((i) => String.fromCharCode(parseInt(i, 16))).join('');
+    return { plaintext, key };
+}
+
+export function decryptBlock(block: string[]) {
+    const transposed = transpose(block);
+    const key = transposed.map((i) => String.fromCharCode(decryptSingleKey(i).key)).join('');
+    const plaintext = block.map((i) => chunk(multiKeyXOR(i, key), 2).map((j) => String.fromCharCode(parseInt(j, 16))).join('')).join('\n');
     return { plaintext, key };
 }
