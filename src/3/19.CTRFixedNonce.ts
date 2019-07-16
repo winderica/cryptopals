@@ -54,5 +54,5 @@ function encrypt() {
 export function fixedNonce() {
     const ciphers = encrypt();
     const { plaintext } = decryptBlock(ciphers.map((i) => bytes2str(hex2bytes(i))));
-    console.log(plaintext);
+    return plaintext;
 }

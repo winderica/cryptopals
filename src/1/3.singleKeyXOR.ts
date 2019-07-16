@@ -3,7 +3,7 @@ import { hex2bytes } from 'utils/converter';
 export function simpleEvaluator(str: string) {
     let score = 0;
     for (const char of str) {
-        if (char.charCodeAt(0) >= 127 || !/[\w \n'".,?!:;\-()\[\]]/.test(char)) {
+        if (char.charCodeAt(0) >= 127 || !/[\w \n'".,?!:;\-()\[\]/]/.test(char)) {
             return 0;
         }
         if (char.toLowerCase() >= 'a' && char.toLowerCase() <= 'z') {
