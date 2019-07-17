@@ -4,9 +4,8 @@ import { SimpleAES } from 'utils/simpleAES';
 
 const prefix = 'comment1=cooking%20MCs;userdata=';
 export const key = randomString();
-const iv = key;
 const suffix = ';comment2=%20like%20a%20pound%20of%20bacon';
-const aes = new SimpleAES('aes-128-cbc', key, iv);
+const aes = new SimpleAES('aes-128-cbc', key, key);
 
 function encrypt(data: string) {
     data = data.replace(/[;=]/g, '');
@@ -21,6 +20,6 @@ export function attack() {
     const cipher = encrypt('');
     const crafted = cipher.slice(0, 32) + '0'.repeat(32) + cipher.slice(0, 32) + cipher.slice(96);
     const decrypted = decrypt(crafted);
-    const chunks = decrypted.match(/.{1,16}/g)!.map((i) => str2bytes(i));
+    const chunks = decrypted.match(/.{16}/gs)!.map((i) => str2bytes(i));
     return bytes2str(chunks[0].map((i, j) => i ^ chunks[2][j]));
 }
