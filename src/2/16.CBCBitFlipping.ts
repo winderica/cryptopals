@@ -24,5 +24,5 @@ export function bitFlipping() {
         hex2bytes(encrypt(data))
             .map((i, j) => j >= 32 && j < 32 + str.length ? i ^ str.charCodeAt(j - 32) ^ char.charCodeAt(0) : i)
     );
-    return decrypt(crafted).includes(';admin=true;');
+    return decrypt(crafted);
 }
