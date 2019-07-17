@@ -31,6 +31,10 @@ export class MT19937 {
         this.initialize(seed);
     }
 
+    getState() {
+        return [...this.x];
+    }
+
     extractNumber() {
         if (this.index > this.n) {
             throw new Error('Generator was never seeded');
