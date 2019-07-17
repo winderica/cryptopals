@@ -9,26 +9,30 @@ export class MT19937 {
      * s, t: TGFSR(R) tempering bit shifts
      * u, d, l: additional Mersenne Twister tempering bit shifts/masks
      */
-    private w = 32;
-    private n = 624;
-    private m = 397;
-    private r = 31;
-    private a = 0x9908b0df;
-    private u = 11;
-    private d = 0xffffffff;
-    private s = 7;
-    private b = 0x9d2c5680;
-    private t = 15;
-    private c = 0xefc60000;
-    private l = 18;
-    private f = 0x6c078965n;
-    private x = new Uint32Array(this.n);
-    private lowerMask = (1 << this.r) - 1;
-    private upperMask = 1 << this.r;
+    private readonly w = 32;
+    private readonly n = 624;
+    private readonly m = 397;
+    private readonly r = 31;
+    private readonly a = 0x9908b0df;
+    private readonly u = 11;
+    private readonly d = 0xffffffff;
+    private readonly s = 7;
+    private readonly b = 0x9d2c5680;
+    private readonly t = 15;
+    private readonly c = 0xefc60000;
+    private readonly l = 18;
+    private readonly f = 0x6c078965n;
+    private readonly x = new Uint32Array(this.n);
+    private readonly lowerMask = (1 << this.r) - 1;
+    private readonly upperMask = 1 << this.r;
     private index = this.n;
 
-    constructor(seed: number) {
-        this.initialize(seed);
+    constructor(seed: number | Uint32Array) {
+        if (typeof seed === 'number') {
+            this.initialize(seed);
+        } else {
+            this.x = seed;
+        }
     }
 
     getState() {

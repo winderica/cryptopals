@@ -5,8 +5,11 @@ describe('Set 3 Challenge 23', () => {
     it('should produce right answer', (done) => {
         const mt = new MT19937(1234);
         const randoms = [...new Array(624)].map(() => mt.extractNumber());
-        const state = mt.getState();
-        expect(state).toEqual(clone(randoms));
+        const clonedMT = clone(randoms);
+        let i = 0;
+        while (i++ < 10) {
+            expect(clonedMT.extractNumber()).toEqual(mt.extractNumber());
+        }
         done();
     });
 });

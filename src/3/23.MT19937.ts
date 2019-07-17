@@ -1,3 +1,5 @@
+import { MT19937 } from 'utils/mt19937';
+
 function inverseRightXOR(value: number, bits: number, mask = 0xffffffff) {
     let result = 0;
     const getBits = (n: number, i: number) => {
@@ -25,11 +27,12 @@ const [t, c] = [15, 0xefc60000];
 const l = 18;
 
 export function clone(values: number[]) {
-    return values.map((value) => {
+    const state = Uint32Array.from(values.map((value) => {
         value = inverseRightXOR(value, l);
         value = inverseLeftXOR(value, t, c);
         value = inverseLeftXOR(value, s, b);
         value = inverseRightXOR(value, u, d);
         return value >>> 0;
-    });
+    }));
+    return new MT19937(state);
 }
