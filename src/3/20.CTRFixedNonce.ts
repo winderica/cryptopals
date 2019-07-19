@@ -1,3 +1,1 @@
-import { fixedNonce } from './19.CTRFixedNonce';
-
-export { fixedNonce };
+export { fixedNonce } from './19.CTRFixedNonce';

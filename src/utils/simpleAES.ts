@@ -1,7 +1,10 @@
 import { base64DecodeAsCharCode, base64EncodeFromCharCode } from '../1/1.hex2base64';
 import { padPKCS7, unpadPKCS7 } from '../2/9.pkcs7';
+import { chunkArray } from './chunkArray';
 import { bytes2hex, bytes2str, hex2bytes, str2bytes } from './converter';
 import { GF256 } from './gf256';
+import { rotateLeft } from './rotate';
+import { concatUint8, splitUint32 } from './uint';
 
 export type Algorithm =
     | 'aes-128-ecb'
@@ -31,16 +34,16 @@ export class SimpleAES {
     private sBox = new Uint8Array(256)
         .map((i, j) => GF256.inverse(j))
         .map((i) => i
-            ^ this.rotateLeft(i)
-            ^ this.rotateLeft(i, 2)
-            ^ this.rotateLeft(i, 3)
-            ^ this.rotateLeft(i, 4)
+            ^ rotateLeft(i)
+            ^ rotateLeft(i, 2)
+            ^ rotateLeft(i, 3)
+            ^ rotateLeft(i, 4)
             ^ 0x63
         );
     private sBoxInv = new Uint8Array(256)
-        .map((i, j) => this.rotateLeft(j)
-            ^ this.rotateLeft(j, 3)
-            ^ this.rotateLeft(j, 6)
+        .map((i, j) => rotateLeft(j)
+            ^ rotateLeft(j, 3)
+            ^ rotateLeft(j, 6)
             ^ 0x05
         )
         .map((i) => GF256.inverse(i));
@@ -70,7 +73,7 @@ export class SimpleAES {
 
     encrypt(plaintext: string, messageEncoding: MessageEncoding = 'ascii', cipherEncoding: CipherEncoding = 'base64', counter = this.counter) {
         const plainBytes = this.textConverter(plaintext, messageEncoding);
-        const textBlocks = this.chunkIntoBlocks(this.algorithm === CTR ? plainBytes : padPKCS7(plainBytes), 16);
+        const textBlocks = chunkArray(this.algorithm === CTR ? plainBytes : padPKCS7(plainBytes), 16);
         const keyBlocks = this.keyExpansion(this.textConverter(this.key, messageEncoding));
         const keyStates = keyBlocks.map(this.transpose);
         switch (this.algorithm) {
@@ -101,7 +104,7 @@ export class SimpleAES {
 
     decrypt(cipher: string, cipherEncoding: CipherEncoding = 'base64', messageEncoding: MessageEncoding = 'ascii', counter = this.counter) {
         const cipherBytes = this.cipherConverter(cipher, cipherEncoding);
-        const cipherBlocks = this.chunkIntoBlocks(cipherBytes, 16);
+        const cipherBlocks = chunkArray(cipherBytes, 16);
         const keyBlocks = this.keyExpansion(this.textConverter(this.key, messageEncoding));
         const keyStates = this.algorithm === CTR ? keyBlocks.map(this.transpose) : keyBlocks.map(this.transpose).reverse();
         switch (this.algorithm) {
@@ -198,7 +201,7 @@ export class SimpleAES {
     }
 
     private keyExpansion(keyBlock: Uint8Array) {
-        const key = this.chunkIntoBlocks(keyBlock, 4).map(this.uint8ToUint32);
+        const key = chunkArray(keyBlock, 4).map(concatUint8);
         const n = key.length; // 4 | 6 | 8
         const round = n + 7; // 11 | 13 | 15
         const expanded = new Array(4 * round);
@@ -207,7 +210,7 @@ export class SimpleAES {
                 expanded[i] = key[i];
             } else if (i >= n && i % n === 0) {
                 expanded[i] = expanded[i - n]
-                    ^ this.subWord(this.rotateWord(expanded[i - 1]))
+                    ^ this.subWord(rotateLeft(expanded[i - 1], 8, 32))
                     ^ this.rconArray[i / n];
             } else if (i >= n && n > 6 && i % n === 4) {
                 expanded[i] = expanded[i - n] ^ this.subWord(expanded[i - 1]);
@@ -215,7 +218,7 @@ export class SimpleAES {
                 expanded[i] = expanded[i - n] ^ expanded[i - 1];
             }
         }
-        return this.chunkIntoBlocks(expanded.flatMap(this.uint32ToUint8), 16);
+        return chunkArray(expanded.flatMap(splitUint32), 16);
     }
 
     private subBytes(state: Uint8Array, inverse = false) {
@@ -251,33 +254,11 @@ export class SimpleAES {
         return state.map((i, j) => i ^ keyState[j]);
     }
 
-    private uint8ToUint32([a0, a1, a2, a3]: number[] | Uint8Array) {
-        return a0 << 24 | a1 << 16 | a2 << 8 | a3;
-    }
-
-    private uint32ToUint8(x: number) {
-        return [x >>> 24 & 0xff, x >>> 16 & 0xff, x >>> 8 & 0xff, x & 0xff];
-    }
-
     private transpose(arr: Uint8Array) {
         return Uint8Array.from([...new Array(16)].map((_, i) => arr[~~(i / 4) + 4 * (i % 4)]));
     }
 
-    private rotateLeft(x: number, shift = 1, bits = 8) {
-        return x << shift | x >>> (bits - shift);
-    }
-
-    private rotateWord(x: number) {
-        return this.rotateLeft(x, 8, 32);
-    }
-
     private subWord(word: number) {
-        return this.uint8ToUint32(this.uint32ToUint8(word).map((i) => this.sBox[i]));
-    }
-
-    private chunkIntoBlocks(arr: number[] | Uint8Array, chunkSize: number) {
-        return [...new Array(Math.ceil(arr.length / chunkSize))].map((i, j) =>
-            Uint8Array.from(arr.slice(j * chunkSize, (j + 1) * chunkSize))
-        );
+        return concatUint8(splitUint32(word).map((i) => this.sBox[i]));
     }
 }
