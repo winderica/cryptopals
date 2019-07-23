@@ -7,7 +7,7 @@ import { concatUint8 } from 'utils/uint';
 function digest(message: string, prevHash: string, prevLength: number) {
     class FakeSHA1 extends SHA1 {
 
-        h = Uint32Array.from(chunkArray(hex2bytes(prevHash), 4).map(concatUint8));
+        h = chunkArray(hex2bytes(prevHash), 4).map(concatUint8);
 
         pad(msg: string) {
             const padded = super.pad(msg);

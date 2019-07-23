@@ -5,7 +5,7 @@ import { concatUint8 } from 'utils/uint';
 import { swap32 } from './endian';
 
 export class MD4 {
-    protected readonly iv = Uint32Array.from([0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476]);
+    protected readonly iv = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476];
     private readonly k = [0x00000000, 0x5A827999, 0x6ED9EBA1];
     private readonly s = [[3, 7, 11, 19], [3, 5, 9, 13], [3, 9, 11, 15]];
     private readonly n = [
@@ -19,18 +19,19 @@ export class MD4 {
         const l1 = ~~((l0 - 56) / 64 + 2) * 64;
         const padded = new Uint8Array(l1);
         str2bytes(message + '\x80' + '\x00'.repeat(l1 - 9 - l0))
-            .concat(hex2bytes(num2hex(swap32(l0 * 8), 16)))
+            .concat(hex2bytes(num2hex(l0 * 8, 16)).reverse())
             .forEach((i, j) => padded[~~(j / 4) * 4 + 3 - j % 4] = i);
         return padded;
     }
 
     digest(message: string) {
         const { round, pad } = this;
+        const iv = Uint32Array.from(this.iv);
         chunkArray(pad(message), 64)
             .map((i) => chunkArray(i, 4))
             .map((i) => i.map(concatUint8))
             .map((x) => {
-                let [a, b, c, d] = this.iv;
+                let [a, b, c, d] = iv;
                 for (let r = 0; r < 3; r++) {
                     for (let t = 0; t < 16; t += 4) {
                         const [x0, x1, x2, x3] = [0, 1, 2, 3].map((i, j) => x[this.n[r][t + j]]);
@@ -41,10 +42,10 @@ export class MD4 {
                         b = round(r)([b, c, d, a], x3, s3);
                     }
                 }
-                [a, b, c, d].map((i, j) => this.iv[j] += i);
+                [a, b, c, d].map((i, j) => iv[j] += i);
             });
 
-        return [...this.iv].map((i) => num2hex(swap32(i), 8)).join('');
+        return [...iv].map((i) => num2hex(swap32(i), 8)).join('');
     }
 
     private round = (r: number) => ([a, b, c, d]: number[], x: number, s: number) => {
