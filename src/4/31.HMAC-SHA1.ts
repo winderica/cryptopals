@@ -33,7 +33,6 @@ export async function attackAsync(file: string) {
         } else {
             index--;
         }
-        console.log(bytes2hex(hash));
     }
     return bytes2hex(hash);
 }
