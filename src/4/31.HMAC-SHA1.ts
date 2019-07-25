@@ -1,4 +1,5 @@
 import path from 'path';
+import { checkHash } from 'set4/31.server';
 import { promisify } from 'util';
 import { bytes2hex } from 'utils/converter';
 import { Worker } from 'worker_threads';
@@ -7,7 +8,7 @@ const getMessage = (worker: Worker) => promisify(
     (cb) => worker.once('message', (res) => cb(null, res))
 )();
 
-export async function attackAsync(file: string) {
+export async function attackAsync(file: string, delay: number) {
     const workerFile = process.env.NODE_ENV === 'production' ? './31.worker.js' : './31.workerImporter.js';
 
     const threads = 32;
@@ -15,7 +16,8 @@ export async function attackAsync(file: string) {
         workerData: {
             file,
             start: j * 256 / threads,
-            end: (j + 1) * 256 / threads
+            end: (j + 1) * 256 / threads,
+            delay
         }
     }));
 
@@ -33,6 +35,12 @@ export async function attackAsync(file: string) {
         } else {
             index--;
         }
+        if (index === 20) {
+            if (await checkHash(file, bytes2hex(hash), delay) !== 200) {
+                index--;
+            }
+        }
+        console.log(bytes2hex(hash));
     }
     return bytes2hex(hash);
 }
